@@ -18,9 +18,13 @@ app.use(express.json());
 // ROUTES
 const userRoute = require('./routes/userRoute');
 const stockRoute = require('./routes/stockRoute');
+const transactionRoute = require('./routes/transactionRoute');
+const orderRoute = require('./routes/orderRoute');
 
 app.use('/api/users', userRoute);
-app.use('/api/stocks',stockRoute);
+app.use('/api/stocks', stockRoute);
+app.use('/api/transactions', transactionRoute);
+app.use('/api/orders', orderRoute);
 
 // Basic test route
 app.get('/', (req, res) => {
