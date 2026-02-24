@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const Home = () => {
   const [stocks, setStocks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const navigate = useNavigate(); // <-- Added for the search bar routing
 
   // Fetch LIVE stocks from your new Yahoo Finance endpoint
   useEffect(() => {
@@ -55,7 +56,7 @@ const Home = () => {
 
                     return (
                       <Link 
-                        to={`/trade/${stock.symbol}`} 
+                        to={`/trade/${stock._id}`} // <-- Changed to use _id for the raw symbol
                         key={stock._id} 
                         className="flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-slate-100 dark:border-slate-800 group"
                       >
@@ -87,25 +88,35 @@ const Home = () => {
             </div>
           </aside>
 
-          {/* Right Column: Watchlist (2/3) - Keeping static for now */}
+          {/* Right Column: Watchlist (2/3) */}
           <section className="w-full lg:w-2/3 flex flex-col gap-6">
             <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
               <div>
-                <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">My Watchlist</h1>
-                <p className="text-slate-500 dark:text-slate-400 text-sm">Track your favorite stocks and market movements.</p>
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">Search Markets</h1>
+                <p className="text-slate-500 dark:text-slate-400 text-sm">Find any global stock to instantly view live charts.</p>
               </div>
               <div className="relative w-full sm:w-auto sm:min-w-[300px]">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <span className="material-symbols-outlined text-slate-400">search</span>
                 </div>
-                <input className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-lg leading-5 bg-white dark:bg-[#1a202c] placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary sm:text-sm transition duration-150 ease-in-out" placeholder="Search for symbols..." type="text" />
+                {/* Fully functional search bar! */}
+                <input 
+                  className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 dark:border-slate-700 rounded-lg leading-5 bg-white dark:bg-[#1a202c] placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary sm:text-sm transition duration-150 ease-in-out" 
+                  placeholder="e.g. AMZN or ZOMATO.NS" 
+                  type="text" 
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && e.target.value.trim() !== '') {
+                      navigate(`/trade/${e.target.value.toUpperCase().trim()}`);
+                    }
+                  }}
+                />
               </div>
             </div>
 
             <div className="bg-primary/10 border border-primary/20 dark:bg-slate-800/50 dark:border-slate-700 rounded-xl p-8 text-center flex flex-col items-center justify-center">
-                <span className="material-symbols-outlined text-5xl text-primary mb-3">star</span>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Watchlist feature coming soon!</h3>
-                <p className="text-slate-500 text-sm max-w-md mt-2">You will be able to search and pin your favorite live stocks here in the next update.</p>
+                <span className="material-symbols-outlined text-5xl text-primary mb-3">troubleshoot</span>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Global Search Enabled</h3>
+                <p className="text-slate-500 text-sm max-w-md mt-2">Type a ticker symbol (like <strong>TSLA</strong> or <strong>TCS.NS</strong>) in the search bar above and press Enter to instantly pull up live market data and place a trade!</p>
             </div>
           </section>
 

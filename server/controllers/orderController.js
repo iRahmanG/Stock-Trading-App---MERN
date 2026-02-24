@@ -17,35 +17,50 @@ const getOrders = async (req, res) => {
 // @route   POST /api/orders
 const addOrder = async (req, res) => {
     try {
-        const { user, symbol, name, price, count, totalPrice, stockType, orderType, orderStatus } = req.body;
+        const { user, symbol, name, price, count, totalPrice, stockType, orderType, orderStatus, stockExchange } = req.body;
 
         const trader = await User.findOne({ email: user });
+        if (!trader) return res.status(404).json({ message: 'User not found' });
 
-        if (!trader) {
-            return res.status(404).json({ message: 'User not found' });
+        // 1. Calculate the actual value in Rupees
+        // If the exchange is NOT NSE, it's a USD stock (like AAPL/TSLA)
+        const conversionRate = 90.0; 
+        const valueInINR = (stockExchange === 'NSE' || stockExchange === 'BSE') 
+            ? totalPrice 
+            : totalPrice * conversionRate;
+
+        // 2. Holding Check for Sell Orders
+        if (orderType === 'sell') {
+            const userOrders = await Order.find({ user, symbol });
+            const currentHoldings = userOrders.reduce((acc, order) => {
+                return order.orderType === 'buy' ? acc + order.count : acc - order.count;
+            }, 0);
+
+            if (currentHoldings < count) {
+                return res.status(400).json({ 
+                    message: `Insufficient holdings. You only own ${currentHoldings} shares of ${symbol}.` 
+                });
+            }
         }
 
-        // 2. Check for sufficient funds!
-        if (orderType === 'buy' && trader.balance < totalPrice) {
-            return res.status(400).json({ message: 'Insufficient funds for this trade.' });
+        // 3. Balance Check for Buy Orders
+        if (orderType === 'buy' && trader.balance < valueInINR) {
+            return res.status(400).json({ message: 'Insufficient funds (Conversion included).' });
         }
 
-        // 3. Do the math: Subtract for Buy, Add for Sell
+        // 4. Update Balance in INR
         if (orderType === 'buy') {
-            trader.balance -= totalPrice;
+            trader.balance -= valueInINR;
         } else if (orderType === 'sell') {
-            trader.balance += totalPrice;
+            trader.balance += valueInINR;
         }
         
-        // Save the new balance to the database
         await trader.save();
 
-        // 4. Create the actual Order record
         const order = await Order.create({
             user, symbol, name, price, count, totalPrice, stockType, orderType, orderStatus
         });
 
-        // 5. Send back the order AND the new balance to the frontend!
         res.status(201).json({ order, newBalance: trader.balance });
         
     } catch (error) {
