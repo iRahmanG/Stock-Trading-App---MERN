@@ -1,18 +1,13 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState } from 'react';
 
-// Create the Context
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-
-  // When the app loads, check if the user is already logged in (saved in localStorage)
-  useEffect(() => {
+  // Initialize state directly from localStorage so it survives page refreshes instantly!
+  const [user, setUser] = useState(() => {
     const storedUser = localStorage.getItem('userInfo');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-  }, []);
+    return storedUser ? JSON.parse(storedUser) : null;
+  });
 
   // Logout function to clear data
   const logout = () => {
