@@ -194,6 +194,10 @@ This project demonstrates proficiency in:
 ---
 
 ## Author
+**Maksud Rahman**
+
+GitHub: [https://github.com/iRahmanG](https://github.com/iRahmanG)
+
 
 ---
 
