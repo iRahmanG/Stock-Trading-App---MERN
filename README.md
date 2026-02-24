@@ -207,6 +207,5 @@ GitHub: [https://github.com/iRahmanG](https://github.com/iRahmanG)
 
 </div>
 
----
 
-**Would you like me to help you finalize any other part of the project before your final presentation?**
+
