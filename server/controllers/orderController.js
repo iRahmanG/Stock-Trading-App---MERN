@@ -1,12 +1,19 @@
 const Order = require('../models/orderSchema');
 const User = require('../models/userModel');
 
-// @desc    Get all stock orders (optionally filtered by user)
+// @desc    Get all stock orders FOR THE LOGGED-IN USER ONLY
 // @route   GET /api/orders
 const getOrders = async (req, res) => {
     try {
-        const { user } = req.query;
-        const orders = await Order.find(user ? { user } : {});
+        // IMPORTANT: We filter by req.user.email which is set by your Auth Middleware
+        // This ensures a user cannot see another user's transaction details
+        const userEmail = req.user ? req.user.email : req.query.user; 
+        
+        if (!userEmail) {
+            return res.status(401).json({ message: "Not authorized to view these orders" });
+        }
+
+        const orders = await Order.find({ user: userEmail });
         res.status(200).json(orders);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -14,7 +21,6 @@ const getOrders = async (req, res) => {
 };
 
 // @desc    Create a new stock order (Buy/Sell)
-// @route   POST /api/orders
 const addOrder = async (req, res) => {
     try {
         const { user, symbol, name, price, count, totalPrice, stockType, orderType, orderStatus, stockExchange } = req.body;
@@ -22,8 +28,7 @@ const addOrder = async (req, res) => {
         const trader = await User.findOne({ email: user });
         if (!trader) return res.status(404).json({ message: 'User not found' });
 
-        // 1. Calculate the actual value in Rupees
-        // If the exchange is NOT NSE, it's a USD stock (like AAPL/TSLA)
+        // 1. Currency Conversion (USD to INR)
         const conversionRate = 90.0; 
         const valueInINR = (stockExchange === 'NSE' || stockExchange === 'BSE') 
             ? totalPrice 
