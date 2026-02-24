@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
@@ -6,23 +6,23 @@ import { AuthContext } from '../context/AuthContext';
 const Trade = () => {
   const { symbol } = useParams();
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext); // Grab the logged-in user and their token
+  const { user, setUser } = useContext(AuthContext); // Added setUser to update balance
+  const chartContainerRef = useRef(null); // Reference for the TradingView chart
   
   const [stock, setStock] = useState(null);
   const [loading, setLoading] = useState(true);
   
   // Form State
-  const [orderType, setOrderType] = useState('buy'); // 'buy' or 'sell'
+  const [orderType, setOrderType] = useState('buy');
   const [quantity, setQuantity] = useState(1);
-  const [orderStatus, setOrderStatus] = useState(''); // To show success/error messages
+  const [orderStatus, setOrderStatus] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Fetch the specific stock data based on the URL
+  // 1. Fetch the specific stock data based on the URL
   useEffect(() => {
     const fetchStockData = async () => {
       try {
         const { data } = await axios.get('http://localhost:8000/api/stocks');
-        // Find the specific stock from the database that matches the URL symbol
         const foundStock = data.find(s => s.symbol.toUpperCase() === symbol.toUpperCase());
         setStock(foundStock);
         setLoading(false);
@@ -33,6 +33,39 @@ const Trade = () => {
     };
     fetchStockData();
   }, [symbol]);
+
+  // 2. Load the TradingView Widget once we have the stock data
+  useEffect(() => {
+    if (!stock || !chartContainerRef.current) return;
+
+    // Clear the container first to prevent duplicate charts if you switch pages
+    chartContainerRef.current.innerHTML = '';
+
+    const script = document.createElement('script');
+    script.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js';
+    script.type = 'text/javascript';
+    script.async = true;
+    
+    // Formatting the symbol for TradingView (e.g., NASDAQ:AAPL or NSE:RELIANCE)
+    const exchangePrefix = stock.stockExchange === 'NSE' || stock.stockExchange === 'BSE' ? 'BSE' : 'NASDAQ';
+    
+    script.innerHTML = JSON.stringify({
+      autosize: true,
+      symbol: `${exchangePrefix}:${stock.symbol}`,
+      interval: "D",
+      timezone: "Asia/Kolkata", // Indian Standard Time
+      theme: "light",
+      style: "1",
+      locale: "in",
+      enable_publishing: false,
+      hide_top_toolbar: false,
+      hide_legend: true,
+      save_image: false,
+      support_host: "https://www.tradingview.com"
+    });
+
+    chartContainerRef.current.appendChild(script);
+  }, [stock]);
 
   // Handle Order Submission
   const handleOrder = async () => {
@@ -45,31 +78,34 @@ const Trade = () => {
     setOrderStatus('');
 
     const orderData = {
-      user: user.email, // Tracking by email
+      user: user.email,
       symbol: stock.symbol,
       name: stock.name,
       price: stock.price,
       count: Number(quantity),
       totalPrice: stock.price * quantity,
-      stockType: 'delivery', // Defaulting to delivery for now
+      stockType: 'delivery',
       orderType: orderType,
       orderStatus: 'Completed'
     };
 
     try {
-      // Send the secure POST request with the JWT token
       const config = {
-        headers: {
-          Authorization: `Bearer ${user.token}`
-        }
+        headers: { Authorization: `Bearer ${user.token}` }
       };
 
-      await axios.post('http://localhost:8000/api/orders', orderData, config);
+      const { data } = await axios.post('http://localhost:8000/api/orders', orderData, config);
       
+      // Update global AuthContext and LocalStorage so the Navbar balance drops instantly!
+      if (data.newBalance !== undefined) {
+        const updatedUser = { ...user, balance: data.newBalance };
+        setUser(updatedUser);
+        localStorage.setItem('userInfo', JSON.stringify(updatedUser));
+      }
+
       setOrderStatus(`Successfully placed ${orderType} order for ${quantity} shares of ${stock.symbol}!`);
-      setQuantity(1); // Reset the form
+      setQuantity(1);
       
-      // Optional: Redirect back to portfolio after a short delay
       setTimeout(() => navigate('/portfolio'), 2000);
 
     } catch (error) {
@@ -108,14 +144,12 @@ const Trade = () => {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-8">
-        {/* Chart Area */}
+        {/* TradingView Chart Area */}
         <section className="w-full lg:w-2/3 flex flex-col gap-6">
-          <div className="bg-white dark:bg-[#1a202c] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm p-5 h-[400px] flex flex-col relative overflow-hidden">
-            <div className="flex-grow flex items-center justify-center bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-100 dark:border-slate-700/50">
-              <p className="text-slate-400 font-medium flex items-center gap-2">
-                <span className="material-symbols-outlined">monitoring</span>
-                Live Chart Data for {stock.symbol}
-              </p>
+          <div className="bg-white dark:bg-[#1a202c] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm h-[450px] flex flex-col relative overflow-hidden">
+            {/* The widget injects itself into this ref div */}
+            <div className="tradingview-widget-container h-full w-full" ref={chartContainerRef}>
+              <div className="tradingview-widget-container__widget h-full w-full"></div>
             </div>
           </div>
         </section>
@@ -162,14 +196,14 @@ const Trade = () => {
                 <div className="flex justify-between items-center">
                   <span className="text-sm font-medium text-slate-500">Available Funds</span>
                   <span className="text-sm font-bold text-slate-900 dark:text-white">
-                    ₹{user?.balance?.toLocaleString('en-IN')}
+                    ₹{user?.balance?.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                   </span>
                 </div>
               </div>
 
               {/* Status Message */}
               {orderStatus && (
-                <div className={`p-3 rounded-lg text-sm font-bold text-center ${orderStatus.includes('failed') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
+                <div className={`p-3 rounded-lg text-sm font-bold text-center ${orderStatus.includes('failed') || orderStatus.includes('Insufficient') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
                   {orderStatus}
                 </div>
               )}
