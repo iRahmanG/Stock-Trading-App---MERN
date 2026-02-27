@@ -1,6 +1,7 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
+import { toast } from 'react-toastify';
 
 const Navbar = () => {
   const location = useLocation();
@@ -9,7 +10,7 @@ const Navbar = () => {
   // Dark Mode State
   const [isDarkMode, setIsDarkMode] = useState(false);
 
-  // Check their computer's preference or previous choice on load
+  // Sync theme with system or local storage on mount
   useEffect(() => {
     if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
       document.documentElement.classList.add('dark');
@@ -20,7 +21,6 @@ const Navbar = () => {
     }
   }, []);
 
-  // The Toggle Function
   const toggleTheme = () => {
     if (isDarkMode) {
       document.documentElement.classList.remove('dark');
@@ -32,7 +32,13 @@ const Navbar = () => {
       setIsDarkMode(true);
     }
   };
+
+  const handleLogout = () => {
+    logout();
+    toast.success("Successfully logged out. See you soon!");
+  };
   
+  // Hide Navbar on Landing Page
   if (location.pathname === '/') return null;
 
   const initials = user?.username ? user.username.charAt(0).toUpperCase() : '?';
@@ -54,7 +60,6 @@ const Navbar = () => {
           </div>
           
           <div className="flex items-center gap-4">
-            {/* Dark Mode Toggle Button */}
             <button 
               onClick={toggleTheme} 
               title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
@@ -69,12 +74,12 @@ const Navbar = () => {
               <div className="hidden sm:flex flex-col text-right mr-2 border-l border-slate-200 dark:border-slate-700 pl-4">
                 <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Buying Power</span>
                 <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
-                  ₹{user.balance?.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  ₹{user.balance?.toLocaleString('en-IN', {minimumFractionDigits: 2})}
                 </span>
               </div>
             )}
 
-            <button onClick={logout} title="Logout" className="text-slate-500 hover:text-rose-500 dark:text-slate-400 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            <button onClick={handleLogout} title="Logout" className="text-slate-500 hover:text-rose-500 dark:text-slate-400 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
               <span className="material-symbols-outlined">logout</span>
             </button>
             

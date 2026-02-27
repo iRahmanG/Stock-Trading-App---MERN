@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
+import { toast } from 'react-toastify'; // Import toast
 
 const Trade = () => {
   const { symbol } = useParams();
@@ -13,7 +14,6 @@ const Trade = () => {
   const [loading, setLoading] = useState(true);
   const [orderType, setOrderType] = useState('buy');
   const [quantity, setQuantity] = useState(1);
-  const [orderStatus, setOrderStatus] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
   // 1. Fetch live stock data
@@ -25,7 +25,7 @@ const Trade = () => {
         setStock(data);
         setLoading(false);
       } catch (error) {
-        console.error("Error fetching stock:", error);
+        toast.error("Error fetching live market data."); // Notify error
         setLoading(false);
       }
     };
@@ -71,16 +71,15 @@ const Trade = () => {
   }, [stock]);
 
   const handleOrder = async () => {
-    if (!user) return alert("Please log in to place an order.");
+    if (!user) return toast.info("Please log in to place an order."); // Use toast instead of alert
 
-    // --- NEW VALIDATION: Check for fractional shares ---
+    // --- WHOLE NUMBER VALIDATION (Maintained) ---
     const parsedQuantity = Number(quantity);
     if (!Number.isInteger(parsedQuantity) || parsedQuantity <= 0) {
-      return alert("Please enter a valid whole number quantity. Fractional shares are not supported.");
+      return toast.warning("Whole shares only. Fractional trading is not supported."); // Use toast warning
     }
 
     setIsProcessing(true);
-    setOrderStatus('');
 
     try {
       const config = { headers: { Authorization: `Bearer ${user.token}` } };
@@ -105,10 +104,10 @@ const Trade = () => {
         localStorage.setItem('userInfo', JSON.stringify(updatedUser));
       }
 
-      setOrderStatus(`Successfully placed ${orderType} order!`);
+      toast.success(`Successfully placed ${orderType} order for ${parsedQuantity} shares!`); // Use toast success
       setTimeout(() => navigate('/portfolio'), 2000);
     } catch (error) {
-      setOrderStatus(error.response?.data?.message || 'Order failed.');
+      toast.error(error.response?.data?.message || 'Order failed.'); // Use toast error
     } finally {
       setIsProcessing(false);
     }
@@ -170,7 +169,7 @@ const Trade = () => {
                 <input 
                   type="number" 
                   min="1" 
-                  step="1" // Prevents fractional arrow movements
+                  step="1" 
                   value={quantity} 
                   onChange={(e) => setQuantity(e.target.value)} 
                   className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-4 py-3 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-primary" 
@@ -182,7 +181,7 @@ const Trade = () => {
                 <div className="flex justify-between items-center text-sm font-medium text-slate-500">Available Funds <span className="font-bold text-slate-900 dark:text-white">₹{user?.balance?.toLocaleString('en-IN')}</span></div>
               </div>
 
-              {orderStatus && <div className={`p-3 rounded text-sm font-bold text-center ${orderStatus.includes('failed') || orderStatus.includes('supported') ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>{orderStatus}</div>}
+              {/* Status text removed in favor of professional toast popups */}
 
               <button onClick={handleOrder} disabled={isProcessing} className={`w-full py-4 rounded-xl text-white font-bold text-lg shadow-md transition-all mt-2 disabled:opacity-50 ${orderType === 'buy' ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-rose-500 hover:bg-rose-600'}`}>
                 {isProcessing ? 'Processing...' : `${orderType === 'buy' ? 'Buy' : 'Sell'} ${stock.symbol}`}

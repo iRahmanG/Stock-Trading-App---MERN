@@ -1,6 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 import Navbar from './components/Navbar';
 import Landing from './pages/Landing';
@@ -11,7 +13,6 @@ import Profile from './pages/Profile';
 
 function App() {
   return (
-   
     <AuthProvider>
       <Router>
         <div className="min-h-screen flex flex-col bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display">
@@ -24,6 +25,20 @@ function App() {
             <Route path="/trade/:symbol" element={<Trade />} />
             <Route path="/profile" element={<Profile />} />
           </Routes>
+
+          {/* Optimized Global Notification Container */}
+          <ToastContainer 
+            position="top-center" 
+            autoClose={2500} 
+            hideProgressBar={false}
+            newestOnTop={true} 
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme="colored"
+          />
         </div>
       </Router>
     </AuthProvider>
