@@ -1,42 +1,51 @@
 import React, { useState, useEffect, useContext } from 'react';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
+import { toast } from 'react-toastify'; // Import toast
 
 const Profile = () => {
-  const { user, logout } = useContext(AuthContext);
+  const { user, logout, loading: authLoading } = useContext(AuthContext); // Get authLoading
+  const navigate = useNavigate(); // Initialize navigate
   const [orders, setOrders] = useState([]);
   const [portfolioValue, setPortfolioValue] = useState(0);
   const [loading, setLoading] = useState(true);
 
+  // 1. PROTECTED ROUTE LOGIC: Redirect if not logged in
+  useEffect(() => {
+    if (!authLoading && !user) {
+      toast.info("Please log in to view your profile.");
+      navigate('/');
+    }
+  }, [user, authLoading, navigate]);
+
+  // 2. Fetch Profile and Financial Data
   useEffect(() => {
     const fetchProfileData = async () => {
       if (!user) return;
       try {
         const config = { headers: { Authorization: `Bearer ${user.token}` } };
         
-        // 1. Fetch Order History
+        // Fetch Order History
         const { data: orderData } = await axios.get('http://localhost:8000/api/orders', config);
         const sortedOrders = orderData.sort((a, b) => (a._id < b._id ? 1 : -1));
         setOrders(sortedOrders);
 
-        // 2. Calculate Current Holdings (Net quantity per stock)
+        // Calculate Current Holdings
         const holdings = orderData.reduce((acc, order) => {
           const qty = order.orderType === 'buy' ? order.count : -order.count;
           acc[order.symbol] = (acc[order.symbol] || 0) + qty;
           return acc;
         }, {});
 
-        // 3. Fetch Live Prices for Holdings to find Market Value
+        // Fetch Live Prices for Holdings
         let currentMarketValueINR = 0;
-        const conversionRate = 83.0; // Standard USD to INR rate
+        const conversionRate = 83.0; 
 
-        // Loop through each stock you actually own
         for (const symbol in holdings) {
           if (holdings[symbol] > 0) {
             try {
-              // We use your existing market/:symbol endpoint
               const { data: liveStock } = await axios.get(`http://localhost:8000/api/market/${symbol}`);
-              
               const priceInINR = (liveStock.stockExchange === 'NSE' || liveStock.stockExchange === 'BSE') 
                   ? liveStock.price 
                   : liveStock.price * conversionRate;
@@ -59,7 +68,19 @@ const Profile = () => {
     fetchProfileData();
   }, [user]);
 
-  if (!user) return <div className="p-12 text-center font-bold">Please log in.</div>;
+  // Handle local sign out with notification
+  const handleSignOut = () => {
+    logout();
+    toast.success("Signed out successfully. Have a great day!");
+    navigate('/');
+  };
+
+  // Prevent flash of content while checking auth
+  if (authLoading || (!user && loading)) {
+    return <div className="p-12 text-center font-bold animate-pulse">Verifying Session...</div>;
+  }
+
+  if (!user) return null;
 
   const netWorth = (user?.balance || 0) + portfolioValue;
   const initials = user.username ? user.username.charAt(0).toUpperCase() : '?';
@@ -68,7 +89,7 @@ const Profile = () => {
     <main className="flex-grow w-full max-w-[1200px] mx-auto px-4 md:px-6 py-8">
       <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight mb-8">My Financial Overview</h1>
 
-      {/* NEW: Net Worth Summary Grid */}
+      {/* Net Worth Summary Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="bg-gradient-to-br from-primary to-blue-700 rounded-xl p-6 text-white shadow-lg border border-blue-400/20">
           <p className="text-blue-100 text-xs font-bold uppercase tracking-wider mb-1">Total Net Worth</p>
@@ -100,7 +121,7 @@ const Profile = () => {
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">{user.username}</h2>
             <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">{user.email}</p>
             
-            <button onClick={logout} className="w-full py-2.5 rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-900/50 dark:hover:bg-rose-900/20 font-bold text-sm transition-colors flex items-center justify-center gap-2">
+            <button onClick={handleSignOut} className="w-full py-2.5 rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 dark:border-rose-900/50 dark:hover:bg-rose-900/20 font-bold text-sm transition-colors flex items-center justify-center gap-2">
               <span className="material-symbols-outlined text-[18px]">logout</span>
               Sign Out
             </button>
