@@ -5,11 +5,10 @@ const Stock = require('../models/stockSchema');
 // @desc    Get users with search functionality
 const getAdminDashboardData = async (req, res) => {
     try {
-        const { search } = req.query; // Get search term from URL
+        const { search } = req.query;
         let userQuery = {};
 
         if (search) {
-            // Search by username or email (case-insensitive)
             userQuery = {
                 $or: [
                     { username: { $regex: search, $options: 'i' } },
@@ -44,7 +43,6 @@ const updateUserByAdmin = async (req, res) => {
         
         if (!user) return res.status(404).json({ message: "User not found" });
 
-        // Apply updates if they are present in the request
         if (balance !== undefined) user.balance = balance;
         if (isAdmin !== undefined) user.isAdmin = isAdmin;
         if (status !== undefined) user.status = status;
@@ -72,11 +70,11 @@ const updateStockByAdmin = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
 // @desc    Fetch audit trail for a specific user
 const getUserAuditTrail = async (req, res) => {
     try {
         const { userId } = req.params;
-        // Search for orders where 'user' matches the username or ID
         const userOrders = await Order.find({ user: userId }).sort({ createdAt: -1 });
         res.json(userOrders);
     } catch (error) {
@@ -84,4 +82,27 @@ const getUserAuditTrail = async (req, res) => {
     }
 };
 
-module.exports = { getAdminDashboardData, updateUserByAdmin, updateStockByAdmin, getUserAuditTrail };
+// @desc    Fetch transactions filtered by user
+const getFilteredTransactions = async (req, res) => {
+    try {
+        const { username } = req.query;
+        let query = {};
+
+        if (username) {
+            query = { user: { $regex: username, $options: 'i' } };
+        }
+
+        const transactions = await Order.find(query).sort({ createdAt: -1 });
+        res.json(transactions);
+    } catch (error) {
+        res.status(500).json({ message: "Failed to filter ledger: " + error.message });
+    }
+};
+
+module.exports = { 
+    getAdminDashboardData, 
+    updateUserByAdmin, 
+    updateStockByAdmin, 
+    getUserAuditTrail,
+    getFilteredTransactions 
+};

@@ -238,21 +238,61 @@ const StockTab = ({ stocks, onUpdateStock }) => (
   </div>
 );
 
-const LedgerTab = ({ transactions }) => (
-  <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
-    <h3 className="font-bold mb-4 flex items-center gap-2"><span className="material-symbols-outlined text-primary">history</span> Transaction Ledger</h3>
-    <div className="space-y-2">
-      {transactions.map((t, i) => (
-        <div key={i} className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800/30 rounded-lg text-xs">
-          <span className={`font-bold uppercase ${t.orderType === 'buy' ? 'text-emerald-500' : 'text-rose-500'}`}>{t.orderType}</span>
-          <span className="font-medium">{t.symbol} x {t.count}</span>
-          <span className="text-slate-400">{new Date(t.createdAt).toLocaleTimeString()}</span>
-          <span className="font-black">₹{t.totalPrice?.toLocaleString()}</span>
+const LedgerTab = ({ transactions, onFilterLedger }) => {
+  const [filterUser, setFilterUser] = React.useState('');
+
+  // Trigger filter when admin types a username
+  React.useEffect(() => {
+    const delayDebounce = setTimeout(() => {
+      onFilterLedger(filterUser);
+    }, 400);
+    return () => clearTimeout(delayDebounce);
+  }, [filterUser]);
+
+  return (
+    <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm">
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="font-bold flex items-center gap-2">
+          <span className="material-symbols-outlined text-primary">history</span> Transaction Ledger
+        </h3>
+        
+        {/* User Filter Input */}
+        <div className="relative w-64">
+          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">person_search</span>
+          <input 
+            type="text"
+            className="w-full bg-slate-50 dark:bg-slate-800 border-none rounded-lg pl-9 pr-4 py-2 text-xs focus:ring-1 focus:ring-primary"
+            placeholder="Filter by Username..."
+            value={filterUser}
+            onChange={(e) => setFilterUser(e.target.value)}
+          />
         </div>
-      ))}
+      </div>
+
+      <div className="space-y-3">
+        {transactions.length > 0 ? transactions.map((t, i) => (
+          <div key={i} className="p-3 bg-slate-50 dark:bg-slate-800/30 rounded-lg flex items-center justify-between border border-transparent hover:border-slate-200 transition-all">
+            <div className="flex items-center gap-4">
+              <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded ${t.orderType === 'buy' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                {t.orderType}
+              </span>
+              <div>
+                <p className="text-xs font-bold">{t.symbol} x {t.count}</p>
+                <p className="text-[10px] text-slate-500">Trader: {t.user}</p> {/* Shows username from ledger */}
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-sm font-black text-slate-900 dark:text-white">₹{t.totalPrice?.toLocaleString()}</p>
+              <p className="text-[10px] text-slate-400">{new Date(t.createdAt).toLocaleTimeString()}</p>
+            </div>
+          </div>
+        )) : (
+          <div className="py-10 text-center text-slate-500 text-xs">No transactions found for user "{filterUser}"</div>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const LogTab = ({ logs }) => (
   <div className="p-6 bg-black text-emerald-500 font-mono text-xs rounded-xl border border-slate-800 overflow-y-auto max-h-[500px]">

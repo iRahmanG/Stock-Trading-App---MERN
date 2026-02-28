@@ -5,7 +5,8 @@ const {
     getAdminDashboardData, 
     updateUserByAdmin, 
     updateStockByAdmin,
-    getUserAuditTrail
+    getUserAuditTrail,
+    getFilteredTransactions
 } = require('../controllers/adminController'); 
 const { protect } = require('../middlewares/authMiddleware');
 const { isAdmin } = require('../middlewares/adminMiddleware');
@@ -18,5 +19,6 @@ router.put('/user', protect, isAdmin, updateUserByAdmin);
 router.put('/stock', protect, isAdmin, updateStockByAdmin);
 // Register the new audit trail route
 router.get('/audit/:userId', protect, isAdmin, getUserAuditTrail);
+router.get('/ledger/filter', protect, isAdmin, getFilteredTransactions);
 
 module.exports = router;
