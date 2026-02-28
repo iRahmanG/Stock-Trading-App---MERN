@@ -2,22 +2,25 @@ const User = require('../models/userModel');
 const Order = require('../models/orderSchema');
 const Stock = require('../models/stockSchema');
 
-// @desc    Fetch comprehensive system data for the Admin Dashboard
 const getAdminDashboardData = async (req, res) => {
     try {
-        // Fetch data for the four telemetry cards
         const activeUsersCount = await User.countDocuments();
-        
-        // Fetch data for the management tables
-        const allUsers = await User.find({}).select('-password');
+        const allUsers = await User.find({}).select('-password').sort({ createdAt: -1 });
         const allStocks = await Stock.find({});
-        const globalLedger = await Order.find({}).sort({ createdAt: -1 }).limit(20);
+        const globalLedger = await Order.find({}).sort({ createdAt: -1 }).limit(50);
+        
+        // Mocking Logs and Settings for this implementation
+        const systemLogs = [
+            { id: 1, event: "Server Restart", time: new Date(), status: "Success" },
+            { id: 2, event: "DB Backup", time: new Date(Date.now() - 3600000), status: "Success" }
+        ];
 
         res.json({
             activeUsers: activeUsersCount,
             users: allUsers,
             stocks: allStocks,
             transactions: globalLedger,
+            logs: systemLogs,
             serverStatus: "Operational",
             latency: "24ms"
         });
