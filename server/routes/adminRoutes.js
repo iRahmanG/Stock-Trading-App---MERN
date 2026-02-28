@@ -6,7 +6,9 @@ const {
     updateUserByAdmin, 
     updateStockByAdmin,
     getUserAuditTrail,
-    getFilteredTransactions
+    getFilteredTransactions,
+    getSystemSettings,
+    updateSystemSettings
 } = require('../controllers/adminController'); 
 const { protect } = require('../middlewares/authMiddleware');
 const { isAdmin } = require('../middlewares/adminMiddleware');
@@ -21,4 +23,6 @@ router.put('/stock', protect, isAdmin, updateStockByAdmin);
 router.get('/audit/:userId', protect, isAdmin, getUserAuditTrail);
 router.get('/ledger/filter', protect, isAdmin, getFilteredTransactions);
 
+router.get('/settings', protect, isAdmin, getSystemSettings);
+router.put('/settings', protect, isAdmin, updateSystemSettings);
 module.exports = router;

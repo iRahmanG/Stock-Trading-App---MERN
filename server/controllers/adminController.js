@@ -1,7 +1,7 @@
 const User = require('../models/userModel');
 const Order = require('../models/orderSchema'); 
 const Stock = require('../models/stockSchema');
-
+const Settings = require('../models/settingsModel');
 // @desc    Get users with search functionality
 const getAdminDashboardData = async (req, res) => {
     try {
@@ -98,11 +98,33 @@ const getFilteredTransactions = async (req, res) => {
         res.status(500).json({ message: "Failed to filter ledger: " + error.message });
     }
 };
+// @desc    Get system settings
+const getSystemSettings = async (req, res) => {
+    try {
+        let settings = await Settings.findOne();
+        if (!settings) settings = await Settings.create({}); // Create default if none exist
+        res.json(settings);
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching settings" });
+    }
+};
+
+// @desc    Update system settings
+const updateSystemSettings = async (req, res) => {
+    try {
+        const settings = await Settings.findOneAndUpdate({}, req.body, { new: true, upsert: true });
+        res.json(settings);
+    } catch (error) {
+        res.status(500).json({ message: "Failed to update system toggles" });
+    }
+};
 
 module.exports = { 
     getAdminDashboardData, 
     updateUserByAdmin, 
     updateStockByAdmin, 
     getUserAuditTrail,
-    getFilteredTransactions 
+    getFilteredTransactions,
+    getSystemSettings, 
+    updateSystemSettings
 };
