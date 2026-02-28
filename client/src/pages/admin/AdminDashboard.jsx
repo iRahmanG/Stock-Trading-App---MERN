@@ -94,17 +94,61 @@ const OverviewTab = ({ data, onUpdateUser, onUpdateStock }) => (
 
 const UserTab = ({ users, onUpdateUser }) => (
   <div className="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
-    <h3 className="font-bold mb-4 flex items-center gap-2"><span className="material-symbols-outlined text-amber-500">group</span> User Management</h3>
-    <div className="space-y-3">
+    <h3 className="font-bold mb-4 flex items-center gap-2">
+      <span className="material-symbols-outlined text-amber-500">group</span> User Management
+    </h3>
+    <div className="space-y-4">
       {users.map((u, i) => (
-        <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50">
-          <div><p className="text-xs font-bold">{u.username}</p><p className="text-[10px] text-slate-500">{u.email}</p></div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-black text-emerald-custom">₹{u.balance?.toLocaleString()}</span>
-            <button onClick={() => {
-                const bal = prompt("New balance:", u.balance);
-                if(bal) onUpdateUser(u._id, { balance: Number(bal) });
-            }} className="text-[10px] text-primary font-bold">Edit</button>
+        <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-transparent hover:border-slate-200 transition-all">
+          <div className="flex items-center gap-4">
+            <div className={`size-10 rounded-full flex items-center justify-center font-bold text-white ${u.status === 'Suspended' ? 'bg-slate-500' : 'bg-primary'}`}>
+              {u.username.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <p className="text-sm font-bold flex items-center gap-2">
+                {u.username}
+                {u.isAdmin && <span className="text-[10px] bg-primary/20 text-primary px-2 py-0.5 rounded-full font-black">ADMIN</span>}
+                {u.status === 'Suspended' && <span className="text-[10px] bg-rose-500/20 text-rose-500 px-2 py-0.5 rounded-full font-black">BANNED</span>}
+              </p>
+              <p className="text-[11px] text-slate-500">{u.email}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-6">
+            <div className="text-right">
+              <p className="text-xs font-black text-emerald-custom">₹{u.balance?.toLocaleString()}</p>
+              <button 
+                onClick={() => {
+                  const bal = prompt("Update balance:", u.balance);
+                  if(bal) onUpdateUser(u._id, { balance: Number(bal) });
+                }} 
+                className="text-[10px] text-primary font-bold hover:underline"
+              >
+                Edit Balance
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              {/* Role Toggle */}
+              <button 
+                onClick={() => onUpdateUser(u._id, { isAdmin: !u.isAdmin })}
+                className="text-[10px] font-bold text-slate-400 hover:text-primary"
+              >
+                {u.isAdmin ? 'Demote to Trader' : 'Make Admin'}
+              </button>
+              
+              {/* Status Toggle (Ban/Unban) */}
+              <button 
+                onClick={() => {
+                  if(window.confirm(`Are you sure you want to ${u.status === 'Suspended' ? 'unban' : 'ban'} ${u.username}?`)) {
+                    onUpdateUser(u._id, { status: u.status === 'Suspended' ? 'Active' : 'Suspended' });
+                  }
+                }}
+                className={`text-[10px] font-bold ${u.status === 'Suspended' ? 'text-emerald-500' : 'text-rose-500'}`}
+              >
+                {u.status === 'Suspended' ? 'Unban Account' : 'Ban Account'}
+              </button>
+            </div>
           </div>
         </div>
       ))}

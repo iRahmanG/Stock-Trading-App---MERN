@@ -6,6 +6,11 @@ const userSchema = new mongoose.Schema({
     usertype: { type: String, required: true },
     password: { type: String, required: true },
     balance: { type: Number, default: 0 },
+    status: {
+        type: String,
+        enum: ['Active', 'Suspended'],
+        default: 'Active'
+    },
     isAdmin: {
         type: Boolean,
         default: false,
