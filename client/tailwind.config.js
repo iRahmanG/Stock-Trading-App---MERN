@@ -10,6 +10,8 @@ export default {
       colors: {
         "primary": "#1152d4",
         "background-light": "#f6f6f8",
+        "emerald-custom": "#10b981",
+        "rose-custom": "#f43f5e",
         "background-dark": "#101622",
       },
       fontFamily: {
