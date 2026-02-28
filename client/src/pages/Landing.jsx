@@ -1,52 +1,52 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react'; // Added useContext
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { AuthContext } from '../context/AuthContext'; // Import context
 
 const Landing = () => {
   const navigate = useNavigate();
+  const { login } = useContext(AuthContext); // Use login from context
   
-  // Form States
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [username, setUsername] = useState(''); // Only used for registration
+  const [username, setUsername] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Handle Form Submission
   const handleSubmit = async (e) => {
-    e.preventDefault(); // Prevent page reload
+    e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
       if (isLogin) {
-        // --- LOGIN LOGIC ---
-        const { data } = await axios.post('http://localhost:8000/api/users/login', {
-          email,
-          password
-        });
+        // Use the centralized login function from AuthContext
+        const success = await login(email, password);
         
-        // Save the secure token and user data to the browser
-        localStorage.setItem('userInfo', JSON.stringify(data));
-        
-        // Teleport to dashboard
-        navigate('/dashboard');
+        if (success) {
+          const userInfo = JSON.parse(localStorage.getItem('userInfo'));
+          
+          // ROLE-BASED REDIRECTION
+          if (userInfo && userInfo.isAdmin) {
+            navigate('/admin'); 
+          } else {
+            navigate('/dashboard');
+          }
+        }
       } else {
-        // --- REGISTER LOGIC ---
         const { data } = await axios.post('http://localhost:8000/api/users/register', {
           username,
           email,
           password,
-          usertype: 'user' // Defaulting to standard user
+          usertype: 'user' 
         });
 
         localStorage.setItem('userInfo', JSON.stringify(data));
         navigate('/dashboard');
       }
     } catch (err) {
-      // Catch backend errors (like "Invalid email or password")
-      setError(err.response?.data?.message || 'Something went wrong. Please try again.');
+      setError(err.response?.data?.message || 'Something went wrong.');
     } finally {
       setLoading(false);
     }
@@ -54,7 +54,7 @@ const Landing = () => {
 
   return (
     <div className="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
-      {/* Navbar */}
+      {/* ... (rest of the Landing UI remains unchanged) ... */}
       <header className="w-full bg-[#0a2e7a] dark:bg-slate-900 border-b border-white/10 px-6 py-4 lg:px-12">
         <div className="mx-auto flex max-w-[1280px] items-center justify-between">
           <div className="flex items-center gap-3 text-white">
@@ -74,12 +74,9 @@ const Landing = () => {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex-grow flex items-center justify-center p-6 lg:p-12">
         <div className="mx-auto w-full max-w-[1280px]">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
-            
-            {/* Left Column: Hero Text & Login/Register Form */}
             <div className="lg:col-span-5 flex flex-col gap-8">
               <div className="flex flex-col gap-4">
                 <h1 className="text-4xl font-extrabold leading-tight tracking-tight text-slate-900 dark:text-white sm:text-5xl lg:text-6xl">
@@ -90,7 +87,6 @@ const Landing = () => {
                 </p>
               </div>
 
-              {/* Dynamic Auth Card */}
               <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-100 dark:border-slate-700 p-6 sm:p-8">
                 <div className="mb-6">
                   <h3 className="text-2xl font-bold text-slate-900 dark:text-white">
@@ -101,7 +97,6 @@ const Landing = () => {
                   </p>
                 </div>
 
-                {/* Error Message Alert */}
                 {error && (
                   <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded text-sm font-medium">
                     {error}
@@ -109,7 +104,6 @@ const Landing = () => {
                 )}
 
                 <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-                  {/* Show Username ONLY if registering */}
                   {!isLogin && (
                     <div className="flex flex-col gap-2">
                       <label className="text-sm font-semibold text-slate-900 dark:text-slate-200">Username</label>
@@ -181,7 +175,7 @@ const Landing = () => {
                     <button 
                       onClick={() => {
                         setIsLogin(!isLogin);
-                        setError(''); // Clear errors when switching
+                        setError(''); 
                       }}
                       className="font-bold text-primary hover:text-blue-700 dark:hover:text-blue-400 transition-colors"
                     >
@@ -191,8 +185,6 @@ const Landing = () => {
                 </div>
               </div>
             </div>
-
-            {/* Right Column: Illustration (Unchanged) */}
             <div className="lg:col-span-7 h-full flex flex-col justify-center">
               <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 border border-slate-200 dark:border-slate-700">
                 <div className="absolute inset-0 flex items-center justify-center bg-slate-50 dark:bg-slate-800" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?q=80&w=2070&auto=format&fit=crop')", backgroundSize: 'cover', backgroundPosition: 'center' }}>

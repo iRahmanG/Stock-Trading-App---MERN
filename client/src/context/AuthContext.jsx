@@ -20,15 +20,18 @@ export const AuthProvider = ({ children }) => {
     try {
       const { data } = await axios.post('http://localhost:8000/api/users/login', { email, password });
       
+      // Data includes _id, username, email, isAdmin, token
       setUser(data);
       localStorage.setItem('userInfo', JSON.stringify(data));
       
-      // Success Notification
-      toast.success(`Welcome back, ${data.username || 'User'}! Login successful.`);
+      if (data.isAdmin) {
+        toast.success(`Admin Authorization Granted. Welcome, ${data.username}!`);
+      } else {
+        toast.success(`Welcome back, ${data.username || 'User'}!`);
+      }
       return true;
     } catch (error) {
-      // Error Notification
-      toast.error(error.response?.data?.message || "Invalid credentials. Please try again.");
+      toast.error(error.response?.data?.message || "Invalid credentials.");
       return false;
     }
   };
@@ -36,7 +39,6 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('userInfo');
-    // Notification is handled in the Navbar handleLogout function
   };
 
   return (
