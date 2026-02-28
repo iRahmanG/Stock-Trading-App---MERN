@@ -35,22 +35,24 @@ const getAdminDashboardData = async (req, res) => {
     }
 };
 
-// @desc    Update user status, balance, or role
 const updateUserByAdmin = async (req, res) => {
     try {
         const { userId, balance, isAdmin, status } = req.body;
         const user = await User.findById(userId);
         
-        if (!user) return res.status(404).json({ message: "User not found" });
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
 
+        // Apply specific updates
         if (balance !== undefined) user.balance = balance;
         if (isAdmin !== undefined) user.isAdmin = isAdmin;
-        if (status !== undefined) user.status = status;
+        if (status !== undefined) user.status = status; // This must be here for banning to work
 
         const updatedUser = await user.save();
         res.json(updatedUser);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: "Update failed: " + error.message });
     }
 };
 

@@ -1,12 +1,11 @@
 const Order = require('../models/orderSchema');
 const User = require('../models/userModel');
+const Settings = require('../models/settingsModel');
+const Stock = require('../models/stockSchema'); // Added to check individual stock status
 
 // @desc    Get all stock orders FOR THE LOGGED-IN USER ONLY
-// @route   GET /api/orders
 const getOrders = async (req, res) => {
     try {
-        // IMPORTANT: We filter by req.user.email which is set by your Auth Middleware
-        // This ensures a user cannot see another user's transaction details
         const userEmail = req.user ? req.user.email : req.query.user; 
         
         if (!userEmail) {
@@ -20,28 +19,51 @@ const getOrders = async (req, res) => {
     }
 };
 
-// @desc    Create a new stock order (Buy/Sell)
+// @desc    Create a new stock order (Buy/Sell) with Admin Overrides
 const addOrder = async (req, res) => {
     try {
         const { user, symbol, name, price, count, totalPrice, stockType, orderType, orderStatus, stockExchange } = req.body;
 
-        // --- NEW SECURITY CHECK: BLOCK FRACTIONAL SHARES ---
+        // --- 1. ADMIN OVERRIDE: CHECK GLOBAL TRADING HALT ---
+        const systemSettings = await Settings.findOne();
+        if (systemSettings && systemSettings.tradingHalted) {
+            return res.status(403).json({ 
+                message: "Market operations are currently suspended by the administration." 
+            });
+        }
+
+        // --- 2. ADMIN OVERRIDE: CHECK INDIVIDUAL STOCK HALT ---
+        const targetedStock = await Stock.findOne({ symbol });
+        if (targetedStock && targetedStock.status === 'Halted') {
+            return res.status(403).json({ 
+                message: `Trading for ${symbol} has been halted due to market volatility.` 
+            });
+        }
+
+        // --- 3. ADMIN OVERRIDE: CHECK USER SUSPENSION (BAN) ---
+        const trader = await User.findOne({ email: user });
+        if (!trader) return res.status(404).json({ message: 'User not found' });
+        
+        if (trader.status === 'Suspended') {
+            return res.status(403).json({ 
+                message: "Your trading privileges have been revoked. Please contact support." 
+            });
+        }
+
+        // --- 4. EXISTING SECURITY CHECK: BLOCK FRACTIONAL SHARES ---
         if (!Number.isInteger(Number(count)) || Number(count) <= 0) {
             return res.status(400).json({ 
                 message: "Fractional trading is not supported. Please enter a whole number quantity." 
             });
         }
 
-        const trader = await User.findOne({ email: user });
-        if (!trader) return res.status(404).json({ message: 'User not found' });
-
-        // 1. Currency Conversion (USD to INR)
+        // --- 5. CURRENCY CONVERSION (USD to INR) ---
         const conversionRate = 90.0; 
         const valueInINR = (stockExchange === 'NSE' || stockExchange === 'BSE') 
             ? totalPrice 
             : totalPrice * conversionRate;
 
-        // 2. Holding Check for Sell Orders
+        // --- 6. HOLDING CHECK FOR SELL ORDERS ---
         if (orderType === 'sell') {
             const userOrders = await Order.find({ user, symbol });
             const currentHoldings = userOrders.reduce((acc, order) => {
@@ -55,12 +77,12 @@ const addOrder = async (req, res) => {
             }
         }
 
-        // 3. Balance Check for Buy Orders
+        // --- 7. BALANCE CHECK FOR BUY ORDERS ---
         if (orderType === 'buy' && trader.balance < valueInINR) {
             return res.status(400).json({ message: 'Insufficient funds (Conversion included).' });
         }
 
-        // 4. Update Balance in INR
+        // --- 8. UPDATE BALANCE IN INR ---
         if (orderType === 'buy') {
             trader.balance -= valueInINR;
         } else if (orderType === 'sell') {
@@ -71,21 +93,12 @@ const addOrder = async (req, res) => {
 
         const order = await Order.create({
             user, symbol, name, price, 
-            count: Math.floor(count), // Final safety floor
+            count: Math.floor(count), 
             totalPrice, stockType, orderType, orderStatus
         });
 
         res.status(201).json({ order, newBalance: trader.balance });
         
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-};
-// @desc    Get all transactions (Admin Only)
-const getAllOrdersAdmin = async (req, res) => {
-    try {
-        const orders = await Order.find({}).sort({ createdAt: -1 }).limit(50);
-        res.status(200).json(orders);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

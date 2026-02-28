@@ -62,7 +62,10 @@ const loginUser = async (req, res) => {
 
         // Find user by email
         const user = await User.findOne({ email });
-
+        // Check if account is suspended before allowing login
+        if (user && user.status === 'Suspended') {
+            return res.status(403).json({ message: "Your account has been suspended by an administrator." });
+        }
         // Check if user exists AND if the password matches
         if (user && (await bcrypt.compare(password, user.password))) {
             res.json({
